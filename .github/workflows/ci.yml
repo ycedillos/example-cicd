@@ -23,7 +23,7 @@ jobs:
       - name: Run unit tests in Docker
         run: |
           docker run --rm -v ${{ github.workspace }}:/app -w /app devsu-demo-app:${{ github.sha }} \
-            bash -c "pip install pytest && pytest"
+            bash -c "python manage.py test"
 
       # 3. Static Code Analysis (flake8)
       - name: Run flake8 in Docker
