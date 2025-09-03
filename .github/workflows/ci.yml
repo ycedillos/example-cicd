@@ -51,7 +51,12 @@ jobs:
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/devsu-demo-app:latest
 
       # 7. Vulnerability Scan
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.16.0
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/devsu-demo-app:latest
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
