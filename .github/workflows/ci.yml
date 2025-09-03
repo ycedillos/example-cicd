@@ -1,0 +1,57 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Code Build (build Docker image)
+      - name: Build Docker image
+        run: |
+          docker build -t devsu-demo-app:${{ github.sha }} .
+
+      # 2. Unit Tests
+      - name: Run unit tests in Docker
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/app -w /app devsu-demo-app:${{ github.sha }} \
+            bash -c "pip install pytest && pytest"
+
+      # 3. Static Code Analysis (flake8)
+      - name: Run flake8 in Docker
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/app -w /app python:3.11-slim \
+            bash -c "pip install flake8 && flake8 ."
+
+      # 4. Code Coverage
+      - name: Run coverage in Docker
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/app -w /app devsu-demo-app:${{ github.sha }} \
+            bash -c "pip install coverage && coverage run -m pytest && coverage report && coverage xml"
+
+      # 5. Login to DockerHub
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 6. Push Docker image
+      - name: Push Docker image
+        run: |
+          docker tag devsu-demo-app:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/devsu-demo-app:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/devsu-demo-app:latest
+
+      # 7. Vulnerability Scan
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.16.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/devsu-demo-app:latest
